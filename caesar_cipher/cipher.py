@@ -1,47 +1,53 @@
-from caesar_cipher.is_english_word import check_confidence
+import re
+import string
+from caesar_cipher.corpus_loader import word_list, name_list
 
-def encrypt(plain, shift):
+def encrypt(code, key):
+    punctuation = list(string.punctuation)
+    encryptions = []
 
-    def shift_upper(val):
-        if val > 90:
-            return (val - 90) + 64
-        if val < 65:
-            return  91 - (65 - val)
-        return val
+    for character in code:
+        if character.isspace():
+            encryptions.append(character)
 
-    def shift_lower(val):
-        if val > 122:
-            return (val - 122) + 96
-        if val < 97:
-            return  123 - (97 - val)
-        return val
+        if character.isdigit():
+            encryptions.append(character)
 
-    encrypted = ""
-    for char in plain:
-        num = ord(char)
-        if not 65 <= num <= 90 and not 97 <= num <= 122:
-            encrypted += chr(num)
-            continue
+        if character in punctuation:
+            encryptions.append(character)
 
-        shifted_num = num + (shift % 26)
-        if 65 <= num <= 90:
-            shifted_num = shift_upper(shifted_num)
+        if character.isalpha():
+            cipher = ""
+            stationary_alpha = ord(character) + key
 
-        if 97 <= num <= 122:
-            shifted_num = shift_lower(shifted_num)
+            if stationary_alpha > ord('z'):
+                stationary_alpha -= 26
+            last_char = chr(stationary_alpha)
+            cipher += last_char
+            encryptions.append(cipher)
+    return ''.join([str(k) for k in encryptions])
 
-        encrypted += chr(shifted_num)
+def decrypt(code, key):
+    return encrypt(code, -key)
 
-    return encrypted
+def crack(encrypted_code):
+    def char_count(char):
 
-def decrypt(cipher, shift):
-    return encrypt(cipher, -shift)
+        possibility = char.split()
+        word_count = 0
+        for candidate in possibility:
+            word = re.sub(r'[^A-Za-z]+', '', candidate)
+            if word in word_list or word in name_list:
+                word_count += 1
+            else:
+                pass
 
-def crack(cipher):
-    shift = 1
-    while shift < 26:
-        candidate = decrypt(cipher, shift)
-        if check_confidence(candidate):
-            return candidate
-        shift += 1
-    return ""
+        return word_count
+
+    for k in range(26):
+        results = encrypt(encrypted_code, k)
+        word_count = char_count(results)
+        percent = int(word_count / len(results.split()) * 100)
+        if percent > 90:
+            return results
+    return ''
